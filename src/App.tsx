@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, createContext, useContext } from 'react';
-import { PlusCircle, Search, Moon, Sun, Calendar, TrendingUp, Briefcase, GraduationCap, CheckCircle, Clock, FileText, Users, X } from 'lucide-react';
+import { PlusCircle, Search, Moon, Sun, Calendar, TrendingUp, Briefcase, GraduationCap, CheckCircle, Clock, FileText, Users, X, ChartBar } from 'lucide-react';
 
 interface Application {
   app_id: number;
@@ -211,7 +211,7 @@ function AppContent() {
   return (
     <>
       <Header currentView={currentView} setCurrentView={setCurrentView} />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'dashboard' && <Dashboard applications={applications} setCurrentView={setCurrentView} />}
         {currentView === 'list' && <ListView applications={applications} />}
         {currentView === 'create' && <CreateForm setCurrentView={setCurrentView} applications={applications} setApplications={setApplications} />}
@@ -226,15 +226,17 @@ function Header({ currentView, setCurrentView }: any) {
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+  <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Apex Track</h1>
+            <a onClick={() => setCurrentView('dashboard')} className="flex items-center cursor-pointer" role="button">
+              <img src="/Apex-Tracker-Logo.png" alt="Apex Track" className="h-8 sm:h-10 object-contain" />
+            </a>
             <nav className="hidden md:flex space-x-1">
               {[
                 { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
                 { id: 'list', label: 'Applications', icon: FileText },
-                { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+                { id: 'analytics', label: 'Analytics', icon: ChartBar },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -634,7 +636,7 @@ function CreateForm({ setCurrentView, applications, setApplications }: any) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Create New Application</h2>
@@ -752,7 +754,7 @@ function CreateForm({ setCurrentView, applications, setApplications }: any) {
                     <option value="Finalized">Finalized</option>
                     <option value="Submitted">Submitted</option>
                   </select>
-                  <button type="button" onClick={() => setDocuments(documents.filter((d, i) => i !== idx))} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                  <button type="button" onClick={() => setDocuments(documents.filter((_, i) => i !== idx))} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
                     <X size={20} />
                   </button>
                 </div>

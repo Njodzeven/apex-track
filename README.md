@@ -17,6 +17,33 @@ If you are developing a production application, we recommend updating the config
 
 ```js
 export default defineConfig([
+
+## Deployment
+
+This repo includes a convenient `npm run deploy` script that builds the app and publishes the `dist/` folder to a branch named `gh` using the `gh-pages` package.
+
+1. Install dependencies:
+
+  ```bash
+  npm ci
+  ```
+
+2. Run the deploy script (this will build and push to the `gh` branch):
+
+  ```bash
+  npm run deploy
+  ```
+
+3. In your repository settings on GitHub, go to Pages and set the site source to the `gh` branch (root).
+
+If you prefer a different branch, edit the `deploy` script in `package.json` and change the `-b gh` argument to the branch you want.
+
+Automatic deployment via GitHub Actions
+
+This repository also includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) which will automatically build and publish the site whenever you push to `main` or `master`. The workflow publishes the build output to the `gh` branch. Make sure GitHub Actions are enabled for your repository (they are enabled by default).
+
+If you prefer local deploys only, you can ignore or remove the workflow file.
+
   globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
