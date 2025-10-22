@@ -7,12 +7,12 @@
   "theme_color": "#0ea5e9",
   "icons": [
     {
-      "src": "/Apex-Tracker-Icon.png",
+      "src": "Apex-Tracker-Icon.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/Apex-Tracker-Logo.png",
+      "src": "Apex-Tracker-Logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
