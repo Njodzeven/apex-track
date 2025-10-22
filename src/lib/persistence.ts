@@ -1,13 +1,6 @@
 const LOCAL_KEY = 'apex-applications-v1';
-const ID_KEY = 'apex-next-id';
 
 let supabase: any = null;
-
-export function getNextId(): number {
-  const current = parseInt(localStorage.getItem(ID_KEY) || '1');
-  localStorage.setItem(ID_KEY, (current + 1).toString());
-  return current;
-}
 
 export async function initSupabase(url?: string, anonKey?: string) {
   if (!url || !anonKey) return null;
