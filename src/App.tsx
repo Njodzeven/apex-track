@@ -229,9 +229,17 @@ function Header({ currentView, setCurrentView }: any) {
   <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <a onClick={() => setCurrentView('dashboard')} className="flex items-center cursor-pointer" role="button">
-              <img src="/Apex-Tracker-Logo.png" alt="Apex Track" className="h-8 sm:h-10 object-contain" />
-            </a>
+            {
+              (() => {
+                const base = import.meta.env.BASE_URL || '/';
+                const href = base;
+                return (
+                  <a href={href} onClick={(e) => { e.preventDefault(); setCurrentView('dashboard'); }} className="flex items-center cursor-pointer" aria-label="Home">
+                    <img src={`${base}Apex-Tracker-Logo.png`} alt="Apex Track" className="h-8 sm:h-10 object-contain" />
+                  </a>
+                );
+              })()
+            }
             <nav className="hidden md:flex space-x-1">
               {[
                 { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },

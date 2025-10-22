@@ -44,6 +44,8 @@ This repository also includes a GitHub Actions workflow (`.github/workflows/depl
 
 If you prefer local deploys only, you can ignore or remove the workflow file.
 
+Note about permissions: If the workflow still fails with a 403 when trying to push to the `gh` branch, go to your GitHub repository settings → Actions → General and ensure that "Allow GitHub Actions to create and approve pull requests" and workflow permissions are enabled (or set to use the GITHUB_TOKEN with write access). Organization policies may also block pushes from actions; in that case ask an admin to permit the workflow or use a personal PAT stored in repository secrets as `ACTIONS_DEPLOY_KEY` and configure the action to use it.
+
   globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
