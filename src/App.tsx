@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, createContext, useContext } from 'react';
 import { PlusCircle, Search, Moon, Sun, Calendar, TrendingUp, Briefcase, GraduationCap, CheckCircle, Clock, FileText, Users, X, ChartBar } from 'lucide-react';
-import { loadFromLocal, saveToLocal, initSupabase, syncToSupabase } from './lib/persistence';
+import { loadFromLocal, saveToLocal, initSupabase, syncToSupabase, getNextId } from './lib/persistence';
 
 interface Application {
   app_id: number;
@@ -83,95 +83,6 @@ const DarkModeContext = createContext<{
   toggleDarkMode: () => {},
 });
 
-const mockApplications: FullApplication[] = [
-  {
-    app_id: 1,
-    type: 'JOB',
-    title: 'Senior Full Stack Developer',
-    status: 'Applied',
-    applied_date: '2025-10-01',
-    deadline: '2025-11-15',
-    is_remote: true,
-    country: 'United States',
-    notes: 'Found through LinkedIn',
-    created_at: '2025-10-01',
-    updated_at: '2025-10-01',
-    job_details: {
-      app_id: 1,
-      company_name: 'TechCorp Inc',
-      source: 'LinkedIn',
-      job_link: 'https://linkedin.com/jobs/12345',
-      offer_salary: 120000,
-      currency: 'USD',
-      contact_id: 1,
-      location: 'Remote',
-    },
-    documents: [
-      { doc_id: 1, app_id: 1, document_name: 'Resume', status: 'Submitted', path_url: '', required: true, notes: '' },
-      { doc_id: 2, app_id: 1, document_name: 'Cover Letter', status: 'Submitted', path_url: '', required: true, notes: '' },
-    ],
-    interactions: [
-      { interaction_id: 1, app_id: 1, interaction_date: '2025-10-01', interaction_type: 'Cold DM', description: 'Sent initial application', outcome: 'Application submitted' },
-    ],
-  },
-  {
-    app_id: 2,
-    type: 'SCHOLARSHIP',
-    title: 'PhD Research Fellowship',
-    status: 'Under Review',
-    applied_date: '2025-09-15',
-    deadline: '2025-12-01',
-    is_remote: false,
-    country: 'Germany',
-    notes: 'Recommended by advisor',
-    created_at: '2025-09-15',
-    updated_at: '2025-09-15',
-    scholarship_details: {
-      app_id: 2,
-      institution_name: 'Technical University of Munich',
-      professor_name: 'Dr. Robert Johnson',
-      funding_amount: 50000,
-      currency: 'EUR',
-      awarded: false,
-      program_name: 'Computer Science PhD',
-    },
-    documents: [
-      { doc_id: 3, app_id: 2, document_name: 'Research Proposal', status: 'Finalized', path_url: '', required: true, notes: '' },
-      { doc_id: 4, app_id: 2, document_name: 'Transcripts', status: 'Submitted', path_url: '', required: true, notes: '' },
-    ],
-    interactions: [],
-  },
-  {
-    app_id: 3,
-    type: 'JOB',
-    title: 'Frontend Developer',
-    status: 'Interviewing',
-    applied_date: '2025-10-05',
-    deadline: '2025-10-28',
-    is_remote: true,
-    country: 'Canada',
-    notes: 'Referral from colleague',
-    created_at: '2025-10-05',
-    updated_at: '2025-10-08',
-    job_details: {
-      app_id: 3,
-      company_name: 'StartupXYZ',
-      source: 'Referral',
-      job_link: 'https://startupxyz.com/careers',
-      offer_salary: null,
-      currency: 'CAD',
-      contact_id: null,
-      location: 'Toronto, ON',
-    },
-    documents: [
-      { doc_id: 5, app_id: 3, document_name: 'Portfolio', status: 'Submitted', path_url: '', required: true, notes: '' },
-    ],
-    interactions: [
-      { interaction_id: 2, app_id: 3, interaction_date: '2025-10-08', interaction_type: 'Initial Screening', description: 'Phone screen with HR', outcome: 'Moved to technical round' },
-    ],
-  },
-];
-
 export default function ApexTrack() {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('apex-dark-mode');
@@ -211,7 +122,7 @@ function AppContent() {
   // initialize applications from localStorage if present, else fallback to mock data
   const [applications, setApplications] = useState<FullApplication[]>(() => {
     const stored = loadFromLocal<FullApplication[]>();
-    return stored ?? mockApplications;
+    return stored ?? [];
   });
 
   // initialize optional Supabase client if env vars are present
@@ -231,9 +142,9 @@ function AppContent() {
       <Header currentView={currentView} setCurrentView={setCurrentView} />
       <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'dashboard' && <Dashboard applications={applications} setCurrentView={setCurrentView} />}
-        {currentView === 'list' && <ListView applications={applications} />}
+        {currentView === 'list' && <ListView applications={applications} setCurrentView={setCurrentView} />}
         {currentView === 'create' && <CreateForm setCurrentView={setCurrentView} applications={applications} setApplications={setApplications} />}
-        {currentView === 'analytics' && <Analytics applications={applications} />}
+        {currentView === 'analytics' && <Analytics applications={applications} setCurrentView={setCurrentView} />}
       </main>
     </>
   );
@@ -324,12 +235,27 @@ function Dashboard({ applications, setCurrentView }: any) {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Applications" value={stats.total} icon={FileText} color="blue" />
-        <StatCard title="Applied" value={stats.applied} icon={Clock} color="yellow" />
-        <StatCard title="Interviewing" value={stats.interviewing} icon={Users} color="purple" />
-        <StatCard title="Offers/Awards" value={stats.offers} icon={CheckCircle} color="green" />
-      </div>
+      {applications.length === 0 ? (
+        <div className="text-center py-8">
+          <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">No Applications Yet</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Start tracking your applications by creating your first one.</p>
+          <button
+            onClick={() => setCurrentView('create')}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <PlusCircle size={20} className="mr-2" />
+            Create Application
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard title="Total Applications" value={stats.total} icon={FileText} color="blue" />
+          <StatCard title="Applied" value={stats.applied} icon={Clock} color="yellow" />
+          <StatCard title="Interviewing" value={stats.interviewing} icon={Users} color="purple" />
+          <StatCard title="Offers/Awards" value={stats.offers} icon={CheckCircle} color="green" />
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
@@ -480,7 +406,10 @@ function StatusBadge({ status }: { status: ApplicationStatus }) {
   );
 }
 
-function ListView({ applications }: any) {
+function ListView({ applications, setCurrentView }: {
+  applications: FullApplication[];
+  setCurrentView: (view: 'dashboard' | 'list' | 'create' | 'analytics') => void;
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'JOB' | 'SCHOLARSHIP'>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -500,6 +429,8 @@ function ListView({ applications }: any) {
   }, [applications, searchQuery, filterType, filterStatus]);
 
   return (
+    <div className="space-y-6">
+      return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -536,20 +467,81 @@ function ListView({ applications }: any) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredApps.map((app: FullApplication) => (
+      {applications.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 border border-gray-200 dark:border-gray-700 text-center">
+          <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">No Applications</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Start your journey by creating your first application.
+          </p>
+          <button
+            onClick={() => setCurrentView('create')}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <PlusCircle size={20} className="mr-2" />
+            Create Application
+          </button>
+        </div>
+      ) : filteredApps.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 border border-gray-200 dark:border-gray-700 text-center">
+          <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">No Matching Applications</h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            No applications match your current filters. Try adjusting your search criteria.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredApps.map((app: FullApplication) => (
+
+      {filteredApps.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 border border-gray-200 dark:border-gray-700 text-center">
+          <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">No Applications Found</h3>
+          {applications.length === 0 ? (
+            <>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Start your journey by creating your first application.</p>
+              <button
+                onClick={() => setCurrentView('create')}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <PlusCircle size={20} className="mr-2" />
+                Create Application
+              </button>
+            </>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400">
+              No applications match your current filters. Try adjusting your search criteria.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredApps.map((app: FullApplication) => (
                 <tr key={app.app_id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     {app.type === 'JOB' ? (
@@ -611,7 +603,7 @@ function CreateForm({ setCurrentView, applications, setApplications }: any) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newApp: FullApplication = {
-      app_id: applications.length + 1,
+      app_id: getNextId(),
       type: appType,
       title: formData.title,
       status: formData.status,
@@ -820,7 +812,7 @@ function CreateForm({ setCurrentView, applications, setApplications }: any) {
   );
 }
 
-function Analytics({ applications }: any) {
+function Analytics({ applications, setCurrentView }: any) {
   const conversionData = useMemo(() => {
     const applied = applications.filter((a: Application) => ['Applied', 'Under Review', 'Interviewing', 'Technical Assessment', 'Final Round', 'Offer Received', 'Awarded'].includes(a.status)).length;
     const interviewing = applications.filter((a: Application) => ['Interviewing', 'Technical Assessment', 'Final Round', 'Offer Received', 'Awarded'].includes(a.status)).length;
@@ -858,10 +850,27 @@ function Analytics({ applications }: any) {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Conversion Funnel</h2>
-        <div className="space-y-4">
-          {conversionData.map((item, index) => (
+      {applications.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 border border-gray-200 dark:border-gray-700 text-center">
+          <ChartBar size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">No Data to Analyze</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Create and track some applications to see analytics and insights about your job search or scholarship applications.
+          </p>
+          <button
+            onClick={() => setCurrentView('create')}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <PlusCircle size={20} className="mr-2" />
+            Create Application
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Conversion Funnel</h2>
+            <div className="space-y-4">
+              {conversionData.map((item, index) => (
             <div key={index}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.stage}</span>
