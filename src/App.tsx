@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, createContext, useContext } from 'react';
 import { PlusCircle, Search, Moon, Sun, Calendar, TrendingUp, Briefcase, GraduationCap, CheckCircle, Clock, FileText, Users, X, ChartBar } from 'lucide-react';
+import { loadFromLocal, saveToLocal, initSupabase, syncToSupabase } from './lib/persistence';
 
 interface Application {
   app_id: number;
@@ -206,7 +207,24 @@ export default function ApexTrack() {
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'list' | 'create' | 'analytics'>('dashboard');
-  const [applications, setApplications] = useState<FullApplication[]>(mockApplications);
+
+  // initialize applications from localStorage if present, else fallback to mock data
+  const [applications, setApplications] = useState<FullApplication[]>(() => {
+    const stored = loadFromLocal<FullApplication[]>();
+    return stored ?? mockApplications;
+  });
+
+  // initialize optional Supabase client if env vars are present
+  useEffect(() => {
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+    if (url && key) initSupabase(url, key);
+  }, []);
+
+  // persist to localStorage whenever applications change
+  useEffect(() => {
+    saveToLocal(applications);
+  }, [applications]);
 
   return (
     <>
@@ -639,7 +657,21 @@ function CreateForm({ setCurrentView, applications, setApplications }: any) {
       };
     }
 
-    setApplications([...applications, newApp]);
+    const next = [...applications, newApp];
+    setApplications(next);
+    // immediate local save (redundant with effect but keeps behavior predictable)
+    try {
+      saveToLocal(next);
+    } catch (e) {
+      /* ignore */
+    }
+
+    // optionally sync to Supabase if configured (non-blocking)
+    if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      // best-effort sync, table name 'applications' expected on the remote DB
+      syncToSupabase('applications', next.slice());
+    }
+
     setCurrentView('list');
   };
 
